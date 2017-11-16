@@ -61,8 +61,8 @@ Each scenario and the parameters of the corresponding beta distribution is repre
 | real1  | A1  | B1 |
 | real2  | A2  | B2 |
 
-Additionally, we quantified the real distribution of mismatches between a set of taxa and each of 2 primer sets. 
-((Alternatively, we could just sample from the empirical values themselves.))
+Additionally, we drew samples from empirically calculated mismatches between a set of taxa and each of 2 actively used primer sets (Miya; Ford 2016). 
+For comparison, we estimated the parameters of the beta distribution from which these values were generated. 
 
 We generated data under these conditions:
 - True DNA template communities:
@@ -95,11 +95,12 @@ The output from the simulations looks like this:
 
 Beyond the bias introduced by PCR mismatch, we assume that measurement of the quantity during or following PCR is perfect (without error).
 
-From this, we can calculate relative abundance in input, and relative abundance in output.
-We calculated the error introduced to each template as (OBS - EXP)/EXP.
+From the simulated outputs, we made three comparisons. 
+1. First, we calculated and compared relative abundance of each species in the template and compared it to that of the output ((OBS - EXP)/EXP).
+2. Second, because community eDNA studies often aim to quantify some aspect of diversity, we calculated evenness and compared it to the true values. 
+3. Third, we made pairwise calculations of true and inferred differences in evenness among the communities.
 
-Finally, because the goal of community eDNA studies is to quantify some property of the community, we calculated richness and evenness, and compared these estimates. 
-Because we intentionally use a community with low richness, we focus especially on measures of evenness.
+Because we intentionally use a community with low and constant richness, we did not include it in our analysis.
 We could convert this first to (OBS - EXP)/EXP in order to have a consistent expectation that points should fall at 0.
 
 ```r
