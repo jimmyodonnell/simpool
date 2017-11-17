@@ -5,7 +5,7 @@ sapply(functions.f, source, echo = FALSE)
 
 # 1. We have a pool of different types of organisms. We'll classify them into 
 # groups based on the identity at a given region of the mitochondrial genome. 
-# Thus, each 'variant' of that sequence corresponds to a type (aka OTU).
+# Thus, each 'variant' of that sequence corresponds to a type (aka species/OTU).
 N_seq_var <- 50
 seq_var <- 1:N_seq_var
 dim_pool <- c(50, 25, 3)
@@ -45,48 +45,56 @@ pts.df
 # The smallest 'species' has a mean body mass of 0.14 g and around 7000 individuals.
 # The largest has a mean body mass of 23 g and around 43 individuals.
 # From this information we can generate some simulated but realistic count data. 
-ind_per_type <- rpois(n = length(counts_mean), lambda = counts_mean)
+ind_per_species <- rpois(n = length(counts_mean), lambda = counts_mean)
 
 # And to bring it back around, we can simulate a mass for each individual
 set.seed(1)
 mass_ind <- rgamma(
-  n = sum(ind_per_type), 
-  shape = rep(bodysize_mean, times = ind_per_type), 
+  n = sum(ind_per_species), 
+  shape = rep(bodysize_mean, times = ind_per_species), 
   rate = 1
   )
 inds <- data.table(
-  type = rep(seq_var, times = ind_per_type), 
+  species = rep(seq_var, times = ind_per_species), 
   mass = mass_ind
 )
-boxplot(split(mass_ind, f = inds$type), cex = 0.5, pch = '.')
+boxplot(split(mass_ind, f = inds$species), 
+  xlab = "species", ylab = "individual body mass (g)", 
+  cex = 0.5, pch = '.', las = 1)
 points(x = 1:N_seq_var, y = bodysize_mean, col = 'red')
 
-# I'm going to call place_inds() multiple times so each type has a different 
+# I'm going to call place_inds() multiple times so each species has a different 
 # distribution in space. 
-inds[,c('x', 'y', 'z') := data.table(place_inds(.N, dim_pool)), by = type]
+inds[,c('x', 'y', 'z') := data.table(place_inds(.N, dim_pool)), by = species]
 
+# plot distribtion of a single species in the pool
+sp.plot <- 1
+par(mfrow = c(2,1))
 ncols <- 3
 mycols <- hsv(h = seq(from = 1/ncols, to = 1, length.out = ncols), s = 0.7, alpha = 0.7)
 # mycols <- colorRampPalette(c("gold", "slateblue", 'green'))(ncols)
 # mycols <- viridis(ncols, end = 1, option = 'magma')
-with(inds[type == 2, ], 
-     plot(x,z, col = mycols[cut(z, breaks = ncols)], lwd = 2, las = 1)
-     )
+with(inds[species == sp.plot, ], 
+     plot(x, z, col = mycols[cut(z, breaks = ncols)], lwd = 2, 
+          xlab = "length", ylab = "depth", las = 1))
 legend('bottomright', legend = c('upper', 'middle', 'lower'), 
        pch = 1, pt.lwd = 2, col = rev(mycols), bty = 'n')
-with(inds[type == 2, ], 
-     plot(x,y, col = mycols[cut(z, breaks = ncols)], lwd = 2, las = 1)
-)
-legend('bottomright', legend = c('upper', 'middle', 'lower'), pch = 1, pt.lwd = 2, col = rev(mycols), bty = 'n')
 
-# NOW we can sample from the environment.
-# Let's start by deciding where to take a sample. 
+with(inds[species == sp.plot, ], 
+     plot(x,y, col = mycols[cut(z, breaks = ncols)], lwd = 2, 
+          xlab = "length", ylab = "width", las = 1))
+legend('bottomright', legend = c('upper', 'middle', 'lower'), 
+       pch = 1, pt.lwd = 2, col = rev(mycols), bty = 'n')
+
+# Now we can sample from the environment.
+# Let's start by deciding where to take our samples. 
 corner_min <- c(0,0,0) # in the corner
 pool_range <- cbind(corner_min, dim_pool)
 sample_points <- as.matrix(expand.grid(pool_range[1,], pool_range[2,], pool_range[3,]))
 
 # In the following lines I'll be doing things in an inefficient way, but in the 
 # hopes it will illustrate each step individually.
+
 # First, calculate the distance that each sample is from each individual.
 for(i in 1:nrow(sample_points)){
   # add columns for the distance between each individual and each sample location
@@ -103,17 +111,19 @@ for(i in 1:nrow(sample_points)){
 }
 
 # temp data frame; very long: N cells in each sample from each *individual*
-temp <- melt.data.table(inds, id.vars = 'type', 
+temp <- melt.data.table(inds, id.vars = 'species', 
                 measure.vars = paste0('cells.', 1:nrow(sample_points)), 
                 variable.name = 'sample', value.name = 'count')
 temp[,sample := gsub('cells.', replacement = '', x = sample, fixed = TRUE)]
 
 # now collapse that into N cells from each *type*
-samples.env <- temp[, sum(count), by = .(sample, type)]
+samples.env <- temp[, sum(count), by = .(sample, species)]
 rm(temp)
 colnames(samples.env)[3] <- "cells"
 
-pldat <- with(samples.env, split(cells, type))
+# plot cells per sample by species
+par(mfrow = c(1,1))
+pldat <- with(samples.env, split(cells, species))
 boxplot(pldat, 
   xlab = 'number of cells in samples', ylab = 'taxon', 
   outpch = 21, outcol="slateblue", outbg="red", 
