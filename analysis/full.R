@@ -1,5 +1,8 @@
 library(data.table)
 
+functions.f <- list.files("functions", full.names = TRUE)
+sapply(functions.f, source, echo = FALSE)
+
 # 1. We have a pool of different types of organisms. We'll classify them into 
 # groups based on the identity at a given region of the mitochondrial genome. 
 # Thus, each 'variant' of that sequence corresponds to a type (aka OTU).
@@ -45,24 +48,17 @@ pts.df
 ind_per_type <- rpois(n = length(counts_mean), lambda = counts_mean)
 
 # And to bring it back around, we can simulate a mass for each individual
-realsd <- 0.00001/bodysize_mean
-logmean <- log(bodysize_mean/sqrt(1+(sqrt(realsd)/(bodysize_mean ^2))))
-logsd <- log(1+((sqrt(realsd)/(bodysize_mean ^2))))
-mass_ind <- rlnorm(
+set.seed(1)
+mass_ind <- rgamma(
   n = sum(ind_per_type), 
-  meanlog = rep(logmean, times = ind_per_type), 
-  sdlog = rep(logsd, times = ind_per_type)
+  shape = rep(bodysize_mean, times = ind_per_type), 
+  rate = 1
   )
-# SCALE <- 1
-# SHAPE <- bodysize_mean/SCALE
-# SHAPES <- rep(SHAPE, times = ind_per_type)
-# mass_ind <- rgamma(n = sum(ind_per_type), shape = SHAPES, scale = SCALE)
 inds <- data.table(
-  # ID = 1:length(mass_ind), 
   type = rep(seq_var, times = ind_per_type), 
   mass = mass_ind
 )
-boxplot(split(mass_ind, f = inds$type), log = 'y', cex = 0.5)
+boxplot(split(mass_ind, f = inds$type), cex = 0.5, pch = '.')
 points(x = 1:N_seq_var, y = bodysize_mean, col = 'red')
 
 # I'm going to call place_inds() multiple times so each type has a different 
@@ -72,7 +68,7 @@ inds[,c('x', 'y', 'z') := data.table(place_inds(.N, dim_pool)), by = type]
 ncols <- 3
 mycols <- hsv(h = seq(from = 1/ncols, to = 1, length.out = ncols), s = 0.7, alpha = 0.7)
 # mycols <- colorRampPalette(c("gold", "slateblue", 'green'))(ncols)
-# mycols <- viridis(3, end = 1, option = 'magma')
+# mycols <- viridis(ncols, end = 1, option = 'magma')
 with(inds[type == 2, ], 
      plot(x,z, col = mycols[cut(z, breaks = ncols)], lwd = 2, las = 1)
      )
@@ -93,6 +89,7 @@ sample_points <- as.matrix(expand.grid(pool_range[1,], pool_range[2,], pool_rang
 # hopes it will illustrate each step individually.
 # First, calculate the distance that each sample is from each individual.
 for(i in 1:nrow(sample_points)){
+  # add columns for the distance between each individual and each sample location
   inds[ , paste0('dist.', i)] <- dist_from_samp(sample_points[i,], as.matrix(inds[,.(x,y,z)]))
 }
 
@@ -101,24 +98,31 @@ for(i in 1:nrow(sample_points)){
 for(i in 1:nrow(sample_points)){
   distvar <- paste0('dist.', i)
   cellvar <- paste0('cells.', i)
+  # for each individual, calculate how many cells end up in each sample
   inds[ , (cellvar)] <- cells_by_dist(inds[[distvar]], inds[,mass])
 }
 
+# temp data frame; very long: N cells in each sample from each *individual*
 temp <- melt.data.table(inds, id.vars = 'type', 
                 measure.vars = paste0('cells.', 1:nrow(sample_points)), 
                 variable.name = 'sample', value.name = 'count')
 temp[,sample := gsub('cells.', replacement = '', x = sample, fixed = TRUE)]
 
-cells_in_samples <- temp[, sum(count), by = .(type, sample)]
+# now collapse that into N cells from each *type*
+samples.env <- temp[, sum(count), by = .(sample, type)]
 rm(temp)
+colnames(samples.env)[3] <- "cells"
 
-with(cells_in_samples[sample == 1], plot(V1))
-with(cells_in_samples[sample == 2], points(V1, col = 'red'))
-abline(v = 1:50, col = grey(0.9))
+pldat <- with(samples.env, split(cells, type))
+boxplot(pldat, 
+  xlab = 'number of cells in samples', ylab = 'taxon', 
+  outpch = 21, outcol="slateblue", outbg="red", 
+  horizontal = TRUE, las = 1)
 
-cells_in_samples[, count := copies_per_cell(V1)]
-template_abun <- cells_in_samples
-template_abun[,V1:= NULL]
+# Compute number of templates per sample, 
+# given number of cells and range of templates/cell
+set.seed(1)
+samples.env[, templates := copies_per_cell(cells)]
 
 ## TODO PICK UP HERE
 
@@ -130,7 +134,6 @@ template_abun <- matrix(NA, nrow = N_samples, ncol = N_seq_var)
 for(i in 1:N_samples){
   template_abun[i,] <- rnbinom(n = N_seq_var, mu = 10, size = 0.6)
 }
-
 
 # each template has some primer efficiency / bias
 primer_efficiencies <- rbeta(n = N_seq_var, 1, 1)
