@@ -125,7 +125,7 @@ colnames(samples.env)[3] <- "cells"
 par(mfrow = c(1,1))
 pldat <- with(samples.env, split(cells, species))
 boxplot(pldat, 
-  xlab = 'number of cells in samples', ylab = 'taxon', 
+  xlab = 'number of cells in samples', ylab = 'species', 
   outpch = 21, outcol="slateblue", outbg="red", 
   horizontal = TRUE, las = 1)
 
@@ -133,6 +133,11 @@ boxplot(pldat,
 # given number of cells and range of templates/cell
 set.seed(1)
 samples.env[, templates := copies_per_cell(cells)]
+pldat <- with(samples.env, split(templates, species))
+boxplot(pldat, 
+  xlab = 'number of templates in samples', ylab = 'species', 
+  outpch = 21, outcol="slateblue", outbg="red", 
+  horizontal = TRUE, las = 1)
 
 ## TODO PICK UP HERE
 
