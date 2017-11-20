@@ -6,8 +6,8 @@ sapply(functions.f, source, echo = FALSE)
 # 1. We have a pool of different types of organisms. We'll classify them into 
 # groups based on the identity at a given region of the mitochondrial genome. 
 # Thus, each 'variant' of that sequence corresponds to a type (aka species/OTU).
-N_seq_var <- 50
-seq_var <- 1:N_seq_var
+N_species <- 10 # was 50
+species <- 1:N_species
 dim_pool <- c(50, 25, 3)
 
 # Each type of organism occurs in different abundances. 
@@ -16,15 +16,15 @@ dim_pool <- c(50, 25, 3)
 # each type (e.g. smaller organisms are more abundant). 
 # To do that, we need to pick some mean body sizes for each of our 
 # organism types. 
-set.seed(2017)
+set.seed(1) # was 2017
 # choose between "realistic", "uniform", or give a single number for all. 
 BODYSIZE_DIST <- "realistic"
 if(BODYSIZE_DIST == "realistic"){
-  bodysize_mean <- rlnorm(N_seq_var)
+  bodysize_mean <- rlnorm(N_species)
 } else if(BODYSIZE_DIST == "uniform"){
-  bodysize_mean <- runif(n = N_seq_var, min = 0, max = 20)
+  bodysize_mean <- runif(n = N_species, min = 0, max = 20)
 } else if(is.numeric(BODYSIZE_DIST)){
-  bodysize_mean <- rep(BODYSIZE_DIST, N_seq_var)
+  bodysize_mean <- rep(BODYSIZE_DIST, N_species)
 }
 par(mar = c(4,4,1,1))
 plot(bodysize_mean, xlab = 'organism type', ylab = 'mean body mass (g)', las = 1)
@@ -55,20 +55,20 @@ mass_ind <- rgamma(
   rate = 1
   )
 inds <- data.table(
-  species = rep(seq_var, times = ind_per_species), 
+  species = rep(species, times = ind_per_species), 
   mass = mass_ind
 )
 boxplot(split(mass_ind, f = inds$species), 
   xlab = "species", ylab = "individual body mass (g)", 
   cex = 0.5, pch = '.', las = 1)
-points(x = 1:N_seq_var, y = bodysize_mean, col = 'red')
+points(x = 1:N_species, y = bodysize_mean, col = 'red')
 
 # I'm going to call place_inds() multiple times so each species has a different 
 # distribution in space. 
 inds[,c('x', 'y', 'z') := data.table(place_inds(.N, dim_pool)), by = species]
 
-# plot distribtion of a single species in the pool
-sp.plot <- 1
+# plot distribution of a single species in the pool
+sp.plot <- 4 # 4
 par(mfrow = c(2,1))
 ncols <- 3
 mycols <- hsv(h = seq(from = 1/ncols, to = 1, length.out = ncols), s = 0.7, alpha = 0.7)
@@ -136,23 +136,34 @@ samples.env[, templates := copies_per_cell(cells)]
 
 ## TODO PICK UP HERE
 
-N_samples <- 10
-samples <- 1:N_samples
+
+samples <- unique(samples.env[,sample])
+N_samples <- length(samples)
 
 # the templates are present in a certain abundance in the extraction
-template_abun <- matrix(NA, nrow = N_samples, ncol = N_seq_var)
-for(i in 1:N_samples){
-  template_abun[i,] <- rnbinom(n = N_seq_var, mu = 10, size = 0.6)
-}
+# template_abun <- matrix(NA, nrow = N_samples, ncol = N_species)
+# for(i in 1:N_samples){
+  # template_abun[i,] <- rnbinom(n = N_species, mu = 10, size = 0.6)
+# }
+
+# pcr replication:
+pcr_per_sample <- 5
+
+
+rep(1:10, times = 1:10)
 
 # each template has some primer efficiency / bias
-primer_efficiencies <- rbeta(n = N_seq_var, 1, 1)
+primer_efficiencies <- rbeta(n = N_species, 1, 1)
 
-true_pcr_products <- expand.grid(seq_var, samples, NA)[,c(2,1,3)]
-names(true_pcr_products) <- c('sample', 'seq.var', 'count')
+# set up PCR output
+species
+
+true_pcr_products <- 
+true_pcr_products <- expand.grid(species, samples, NA)[,c(2,1,3)]
+names(true_pcr_products) <- c('sample', 'species', 'count')
 for(i in 1:N_samples){
-  current_max <- i * N_seq_var
-  current_min <- current_max - N_seq_var + 1
+  current_max <- i * N_species
+  current_min <- current_max - N_species + 1
   true_pcr_products[current_min:current_max,'count'] <- do_pcr(
     template_copies = template_abun[i,], template_effs = primer_efficiencies, 
     ncycles = 40, inflection = 10, slope = 0.2
@@ -179,11 +190,11 @@ vol_to_pool <- 10 * (min(qubit_mass)/qubit_mass)
 mol_pipette_exp <- molecules_per_sample_product * (vol_to_pool/(pcr_vol))
 mol_pipette_actual <- rpois(n = N_samples, lambda = mol_pipette_exp)
 
-mols_to_seq <- expand.grid(seq_var, samples, NA)[,c(2,1,3)]
-names(mols_to_seq) <- c('sample', 'seq.var', 'count')
+mols_to_seq <- expand.grid(species, samples, NA)[,c(2,1,3)]
+names(mols_to_seq) <- c('sample', 'species', 'count')
 for(i in 1:N_samples){
-  current_max <- i * N_seq_var
-  current_min <- current_max - N_seq_var + 1
+  current_max <- i * N_species
+  current_min <- current_max - N_species + 1
   mols_to_seq[current_min:current_max,'count'] <- rmultinom(
     n = 1, size = mol_pipette_actual[i], 
     prob = true_pcr_products[true_pcr_products$sample == i, 'count'])
@@ -196,6 +207,6 @@ seq_depth <- rpois(n = 1, lambda = 1e6)
 seq_prob <- mols_to_seq$count/sum(mols_to_seq$count)
 
 # and the number of reads of each taxon from each sample might be:
-seq_dat <- expand.grid(seq_var, samples, NA)[,c(2,1,3)]
-names(seq_dat) <- c('sample', 'seq.var', 'count')
+seq_dat <- expand.grid(species, samples, NA)[,c(2,1,3)]
+names(seq_dat) <- c('sample', 'species', 'count')
 seq_dat[,'count'] <- rmultinom(n = 1, size = seq_depth, prob = seq_prob)
