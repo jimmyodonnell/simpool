@@ -42,8 +42,8 @@ pts.df <- data.frame(x = range(bodysize_mean), y = rev(range(counts_mean)))
 text(pts.df, labels = round(pts.df$y), col = 'darkorchid', pos = c(4,3), font = 2)
 pts.df
 
-# The smallest 'species' has a mean body mass of 0.14 g and around 7000 individuals.
-# The largest has a mean body mass of 23 g and around 43 individuals.
+# The smallest 'species' has a mean body mass of 0.43 g and around 2306 individuals.
+# The largest has a mean body mass of 4.9 g and around 203 individuals.
 # From this information we can generate some simulated but realistic count data. 
 ind_per_species <- rpois(n = length(counts_mean), lambda = counts_mean)
 
@@ -92,6 +92,9 @@ corner_min <- c(0,0,0) # in the corner
 pool_range <- cbind(corner_min, dim_pool)
 sample_points <- as.matrix(expand.grid(pool_range[1,], pool_range[2,], pool_range[3,]))
 
+samples <- nrow(sample_points)
+N_samples <- seq_along(samples)
+
 # In the following lines I'll be doing things in an inefficient way, but in the 
 # hopes it will illustrate each step individually.
 
@@ -139,79 +142,93 @@ boxplot(pldat,
   outpch = 21, outcol="slateblue", outbg="red", 
   horizontal = TRUE, las = 1)
 
-## TODO PICK UP HERE
+EXPORT <- FALSE
+if(EXPORT){
+  fwrite(samples.env, "../data/samples_env.csv")
+}
+
+# This is the end of environmental sampling
+################################################################################
 
 
-samples <- unique(samples.env[,sample])
-N_samples <- length(samples)
 
-# the templates are present in a certain abundance in the extraction
-# template_abun <- matrix(NA, nrow = N_samples, ncol = N_species)
-# for(i in 1:N_samples){
-  # template_abun[i,] <- rnbinom(n = N_species, mu = 10, size = 0.6)
-# }
+################################################################################
+# This is where lab work begins.
+# Note that as of now, there is no DNA extraction.
 
 # pcr replication:
-pcr_per_sample <- 5
+pcr_per_sample <- 3
+N_pcr  <- N_samples * pcr_per_sample
+pcr_id <- 1:N_pcr
 
-
-rep(1:10, times = 1:10)
 
 # each template has some primer efficiency / bias
-primer_efficiencies <- rbeta(n = N_species, 1, 1)
+set.seed(3)
+primer_efficiencies <- rbeta(n = N_species, 10, 1)
+plot(primer_efficiencies, ylim = c(0,1), 
+  xlab = "Species", ylab = "Primer Efficiency", las = 1)
 
 # set up PCR output
-species
+temp <- expand.grid(species, 1:pcr_per_sample, samples)[,c(3,2,1)]
+colnames(temp) <- c("sample.env", "pcr.rep", "species")
+pcr_output <- data.table(pcr.id = rep(pcr_id, each = N_species), temp, count = NA_real_)
+rm(temp)
 
-true_pcr_products <- 
-true_pcr_products <- expand.grid(species, samples, NA)[,c(2,1,3)]
-names(true_pcr_products) <- c('sample', 'species', 'count')
-for(i in 1:N_samples){
-  current_max <- i * N_species
-  current_min <- current_max - N_species + 1
-  true_pcr_products[current_min:current_max,'count'] <- do_pcr(
-    template_copies = template_abun[i,], template_effs = primer_efficiencies, 
-    ncycles = 40, inflection = 10, slope = 0.2
-  )
+# Run PCRs
+set.seed(1)
+for(i in 1:N_pcr){
+  current_rows <- which(pcr_output[,pcr.id] == i)
+  current_samp <- pcr_output[current_rows,unique(sample.env)]
+  pcr_output[current_rows, count := do_pcr(
+    template_copies = samples.env[sample == current_samp,templates], 
+    template_effs = primer_efficiencies, 
+    ncycles = 40, inflection = 10, slope = 0.2)
+  ]
 }
 
 # when we pool our samples, the number of molecules will be influenced by:
 # concentration measurement error:
 DT <- data.table(true_pcr_products)
 # samples contain different numbers of fragments:
-molecules_per_sample_product <- DT[,sum(count), by = sample]$V1
+molecules_per_pcr_product <- pcr_output[,sum(count), by = pcr.id]$V1
 # and our measurement of them is not accurate, both because of pipetting:
-qubit_vol_exp <- rep(1, N_samples)
+qubit_vol_exp <- rep(1, N_pcr)
 qubit_vol_act <- pipette(qubit_vol_exp)
 pcr_vol   <- 50
-lambderp <- molecules_per_sample_product * qubit_vol_act/pcr_vol
-molecules_into_qubit <- rpois(N_samples, lambda = lambderp)
+lambderp <- molecules_per_pcr_product * qubit_vol_act/pcr_vol
+molecules_into_qubit <- rpois(N_pcr, lambda = lambderp)
 # and because of the measurement error of the qubit
-qubit_mass <- rpois(N_samples, lambda = molecules_into_qubit)
+qubit_mass <- rpois(N_pcr, lambda = molecules_into_qubit)
 min_vol_to_pool <- 10
 vol_to_pool <- 10 * (min(qubit_mass)/qubit_mass)
 
 # and again, when we pool them, there is error inherent to pipetting
-mol_pipette_exp <- molecules_per_sample_product * (vol_to_pool/(pcr_vol))
-mol_pipette_actual <- rpois(n = N_samples, lambda = mol_pipette_exp)
+mol_pipette_exp <- molecules_per_pcr_product * (vol_to_pool/(pcr_vol))
+mol_pipette_actual <- rpois(n = N_pcr, lambda = mol_pipette_exp)
 
-mols_to_seq <- expand.grid(species, samples, NA)[,c(2,1,3)]
-names(mols_to_seq) <- c('sample', 'species', 'count')
-for(i in 1:N_samples){
-  current_max <- i * N_species
-  current_min <- current_max - N_species + 1
-  mols_to_seq[current_min:current_max,'count'] <- rmultinom(
-    n = 1, size = mol_pipette_actual[i], 
-    prob = true_pcr_products[true_pcr_products$sample == i, 'count'])
+# The molecules go onto the sequencer
+mols_to_seq <- copy(pcr_output)
+mols_to_seq[,count:= NA_real_]
+for(i in 1:N_pcr){
+  current_rows <- which(mols_to_seq[,pcr.id] == i)
+  mols_to_seq[current_rows, count := 
+    as.numeric(rmultinom(n = 1, size = mol_pipette_actual[i], 
+      prob = pcr_output[current_rows, count]))
+  ][]
 }
 
 # The sequencer has some expected output ('depth')
 seq_depth <- rpois(n = 1, lambda = 1e6)
 
 # molecules (sample and variant) are sequenced according to their abundance
-seq_prob <- mols_to_seq$count/sum(mols_to_seq$count)
+seq_prob <- mols_to_seq[,count/sum(count)]
 
 # and the number of reads of each taxon from each sample might be:
-seq_dat <- expand.grid(species, samples, NA)[,c(2,1,3)]
-names(seq_dat) <- c('sample', 'species', 'count')
-seq_dat[,'count'] <- rmultinom(n = 1, size = seq_depth, prob = seq_prob)
+seq_dat <- copy(mols_to_seq)[,count:= NA][]
+set.seed(1)
+seq_dat[,count := rmultinom(n = 1, size = seq_depth, prob = seq_prob)[,1]]
+
+EXPORT <- FALSE
+if(EXPORT){
+  fwrite(seq_dat, file = "../data/seq_dat.csv")
+}
