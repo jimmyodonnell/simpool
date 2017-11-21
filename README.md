@@ -98,14 +98,37 @@ Beyond the bias introduced by PCR mismatch, we assume that measurement of the qu
 From the simulated outputs, we made three comparisons. 
 1. First, we calculated and compared relative abundance of each species in the template and compared it to that of the output ((OBS - EXP)/EXP).
 2. Second, because community eDNA studies often aim to quantify some aspect of diversity, we calculated evenness and compared it to the true values. 
-3. Third, we made pairwise calculations of true and inferred differences in evenness among the communities.
+3. (?) Third, we made pairwise comparisons of true and inferred differences in evenness among the communities. 
 
-Because we intentionally use a community with low and constant richness, we did not include it in our analysis.
+We tweaked three things:
+1. Primer efficiency (6 contrasts)
+2. Species richness (3 levels: low, medium, high)
+3. Abundance distribution (4 levels: even, and 3 power scenarios)
+
+Other things that could be explored:
+1. Number of sequencing reads (sequencing depth)
+2. Number of PCR replicates
+
+We explore a possible solution to the problems we discuss: To exclude species 
+from the analysis if their primer efficiency is below some threshold. 
+
+
 We could convert this first to (OBS - EXP)/EXP in order to have a consistent expectation that points should fall at 0.
 
+### Plots
 ```r
 center <- function(OBS, EXP){return((OBS - EXP)/EXP)}
 boxplot( center(evenness) ~ true_evenness, box.col = levels(mmv.scenario))
+```
+
+```r
+# hold mean constant (e.g. 0.95), plot diversity under different (continuous)
+# variance scenarios (from beta distribution)
+```
+
+```r
+# plot of the effect of removing sequences from organisms from which we know 
+# there is low primer efficiency
 ```
 
 Finally, for scenarios in which the variation in inferred evenness is high (e.g. mmv = high), we conducted the following analysis:
