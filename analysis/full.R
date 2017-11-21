@@ -18,7 +18,7 @@ dim_pool <- c(50, 25, 3)
 # organism types. 
 set.seed(1) # was 2017
 # choose between "realistic", "uniform", or give a single number for all. 
-BODYSIZE_DIST <- "realistic"
+BODYSIZE_DIST <- "realistic" # ("realistic", "uniform", numeric)
 if(BODYSIZE_DIST == "realistic"){
   bodysize_mean <- rlnorm(N_species)
 } else if(BODYSIZE_DIST == "uniform"){
@@ -125,7 +125,7 @@ rm(temp)
 colnames(samples.env)[3] <- "cells"
 
 # plot cells per sample by species
-par(mfrow = c(1,1))
+par(mfrow = c(1,1), mar = c(4,4,1,1))
 pldat <- with(samples.env, split(cells, species))
 boxplot(pldat, 
   xlab = 'number of cells in samples', ylab = 'species', 
@@ -188,7 +188,6 @@ for(i in 1:N_pcr){
 
 # when we pool our samples, the number of molecules will be influenced by:
 # concentration measurement error:
-DT <- data.table(true_pcr_products)
 # samples contain different numbers of fragments:
 molecules_per_pcr_product <- pcr_output[,sum(count), by = pcr.id]$V1
 # and our measurement of them is not accurate, both because of pipetting:
