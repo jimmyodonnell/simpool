@@ -54,15 +54,15 @@ Each scenario and the parameters of the corresponding beta distribution is repre
 
 | Mismatch Variation | Shape1 | Shape2 |
 |---|:-:|:-:|
-| high   | 1  | 1 |
-| medium | 2  | 1 |
-| low    | 10 | 1 |
 | absent | 1  | 0 |
+| low    | 10 | 1 |
+| medium | 2  | 1 |
+| high   | 1  | 1 |
 | real1  | A1  | B1 |
 | real2  | A2  | B2 |
 
 Additionally, we drew samples from empirically calculated mismatches between a set of taxa and each of 2 actively used primer sets (Miya; Ford 2016). 
-For comparison, we estimated the parameters of the beta distribution from which these values were generated. 
+For comparison, we might estimate the parameters of the beta distribution from which these values were generated. 
 
 We generated data under these conditions:
 - True DNA template communities:
