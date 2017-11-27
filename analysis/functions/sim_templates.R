@@ -11,6 +11,10 @@
 #' 
 #' @param stochastic Logical. Should counts be stochastic?
 #' 
+#' @param names Logical. Should ouput be labeled with species numbers as names?
+#' 
+#' @param sort Logical. Should ouput be sorted in decreasing order?
+#' 
 #' @return Numeric vector of counts with sum = N_out. Note that outputs are not 
 #' guaranteed to be integers if stochastic = FALSE. You are welcomed to wrap the
 #' function in round() if you require integer outputs; however, this does not 
@@ -27,7 +31,7 @@
 #' @examples sim_templates(4, 100, 'skew.lin', FALSE) # 25 25 25 25
 #' 
 #' @export
-sim_templates <- function(N_sp, N_out, evenness, stochastic){
+sim_templates <- function(N_sp, N_out, evenness, stochastic, names = FALSE, sort){
   
   even.opts <- c('even', 'skew.lin', 'skew.low', 'skew.med', 'skew.hi')
   
@@ -72,9 +76,19 @@ sim_templates <- function(N_sp, N_out, evenness, stochastic){
   pY <- p(y)
 
   if(stochastic){
-    return(rmultinom(n = 1, size = N_out, prob = pY)[,1])
+    counts <- rmultinom(n = 1, size = N_out, prob = pY)[,1]
   }else{
-    return(pY * N_out)
+    counts <- pY * N_out
   }
+  
+  if(sort){
+    counts <- sort(counts, decreasing = TRUE)
+  }
+  
+  if(names){
+    names(counts) <- seq_along(counts)
+  }
+  
+  return(counts)
   
 }
