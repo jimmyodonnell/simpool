@@ -8,39 +8,28 @@ even.levs <- c('even', 'skew.lin', 'skew.low', 'skew.med', 'skew.hi')
 N_even <- length(even.levs)
 
 rich.levs <- c(10, 100, 1000)
+N_rich <- length(rich.levs)
 
 reps.each <- 10
 reps.levs <- 1:reps.each
 
 N_comm <- length(even.levs) * length(rich.levs)
 
-
-for(i in 1:length(rich.levs)){
-  
-}
-
-template_dat <- data.table(
-  # comm = rep(1:N_even, each = rich.levs[1]*reps.each), 
-  even = rep(even.levs, each = rich.levs[1]), # rich.levs[1]*reps.each
-  # rich = rep(rich.levs[1], rich.levs[1]*reps.each*N_even), 
-  sample = rep(1:(N_even*rich.levs[1]), each = reps.each), 
-  species = rep(1:rich.levs[1], N_even*reps.each), 
-  count = NA_integer_
-)[1:100,]
-
-N_even*rich.levs[1]
-
-for(i in template_dat$sample){
-  
-}
-template_dat[sample == 1, count] <- 
-sim_templates(N_sp = rich.levs[1], N_out = 1e6, evenness = even.levs[1], stochastic = TRUE)
+N_templates <- 1e6
 
 temp <- expand.grid(reps.levs, even.levs, rich.levs)
 colnames(temp) <- c('rep', 'even', 'rich')
-template_dat <- data.table(comm = rep(1:N_comm, each = reps.each), sample = 1:nrow(temp), temp, templates = NA_integer_)
+sample_dat <- data.table(sample = 1:nrow(temp), comm = rep(1:N_comm, each = reps.each), temp)
 rm(temp)
-# Dt[sample == I, unique(evenness)]
+
+# simulate template counts
+template_dat <- sample_dat[ , 
+  list(templates = sim_templates(N_sp = rich, N_out = N_templates, 
+    evenness = even, stochastic = TRUE, sort = TRUE)), 
+  by = sample]
+
+template_dat[, species := seq_along(templates), by = sample]
+
+template_dat <- merge(x = sample_dat, y = template_dat, by = 'sample')
 
 template_dat
-
