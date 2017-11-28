@@ -15,7 +15,7 @@ reps.levs <- 1:reps.each
 
 N_comm <- length(even.levs) * length(rich.levs)
 
-N_templates <- 1e6
+N_templates <- 1e5
 
 temp <- expand.grid(reps.levs, even.levs, rich.levs)
 colnames(temp) <- c('rep', 'even', 'rich')
