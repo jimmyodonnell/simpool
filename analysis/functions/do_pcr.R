@@ -47,7 +47,7 @@ do_pcr <- function(template_copies, template_effs,
     # new_copies <- rmultinom(n = 1, size = cycle_prod, prob = cycle_prob)
     new_copies <- rpois(n = length(template_copies), 
                         lambda = cycle_prob * cycle_prod)
-    product[i,] <- counts_prev + new_copies
+    product[i,] <- as.numeric(counts_prev) + as.numeric(new_copies)
   }
   if(full){
     return(product)
