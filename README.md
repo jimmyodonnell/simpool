@@ -1,7 +1,4 @@
-### PCR bias in metagenomic surveys
-
-Google Doc:
-https://docs.google.com/document/d/1xFeQn20gf39s0XX2sSD9UKYWVCTPduWSVkX-GPjat9A/
+### Is environmental DNA reliable?
 
 Environmental DNA (eDNA) is currently used to estimate properties of ecological communities (e.g. richness, evenness, presence of a single species).
 However, the accuracy and reliability of those estimate is unknown. 
