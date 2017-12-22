@@ -36,7 +36,7 @@ dist_b <- merge(dist_f[,.(seq_id, label, taxon, distf = dist)], dist_r[,.(seq_id
 dist_b[ , eff := 1-((distf + distr)/2) ]
 
 plot(dist_b$eff)
-plot(density(dist_b$eff, na.rm = TRUE))
+plot(density(dist_b$eff, na.rm = TRUE, bw = 0.02))
 
 hist(dist_b$eff, 
   xlab = 'primer efficiency', 
