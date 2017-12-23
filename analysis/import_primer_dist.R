@@ -3,7 +3,7 @@
 
 primer_opts <- c("Ford2016", "Miya2015")
 
-primer_set <- primer_opts[1]
+primer_set <- primer_opts[2]
 
 if(primer_set == "Ford2016"){
   primername_f <- "16s-prey-f-dg"
@@ -42,3 +42,24 @@ hist(dist_b$eff,
   xlab = 'primer efficiency', 
   main = paste0('primer set: ', primer_set))
 
+plot(scale(dist_b$eff))
+plot(density(scale(dist_b$eff), na.rm = TRUE, bw = 0.5), main = "")
+
+hist(scale(dist_b$eff), prob = TRUE)
+lines(density(scale(dist_b$eff), na.rm = TRUE, bw = 0.5), col = 4, lwd = 2)
+
+mymu <- mean(dist_b$eff, na.rm = TRUE)
+myvar <- var(dist_b$eff, na.rm = TRUE)
+estBetaParams <- function(mu, var){
+  # estimate parameters of beta distribution given mean and variance
+  # https://stats.stackexchange.com/a/12239
+  alpha <- ((1 - mu) / var - 1/mu) * mu^2
+  beta  <- alpha * (1 / mu - 1)
+  return(c(alpha = alpha, beta = beta))
+}
+myparams <- estBetaParams(mymu, myvar)
+
+(param.scale <- sum(myparams))
+myparams/param.scale
+
+hist(rbeta(2500, myparams[1], myparams[2]))
